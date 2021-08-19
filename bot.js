@@ -1,21 +1,42 @@
 require("dotenv").config();
 const Discord = require("discord.js");
-const CommandHandler = require("./commandHandler");
+const CommandHandler = require("./util/CommandHandler");
 
 class NoodleBot {
-  static client = new Discord.Client();
-  static init = () => {
-    CommandHandler.init();
+    /**
+     * Client object of an instance of NoodleBot
+     * @type Discord.Client
+     */
+    static client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS] });
 
-    this.client.on("message", (message) => {
-      //temp prefix... ideally we grab the server prefix from db
-      if (message.content.startsWith("-")) {
-        CommandHandler.executeCommand(message);
-      }
-    });
+    /**
+     * Map of all Guild IDs with the bot's respective state
+     * @type Map<String, GuildState>
+     */
+    static guildStates = new Map();
 
-    this.client.login(process.env.DISCORD_TOKEN);
-  };
+    /**
+     * Contains all startup sequences of the bot
+     */
+    static start = () => {
+        this.client.on("interactionCreate", async interaction => {
+            if(!interaction.isCommand()) return;
+            CommandHandler.handleCommand(interaction);
+        })
+        this.client.login(process.env.DISCORD_TOKEN);
+
+        CommandHandler.registerSlashCommands(process.env.DISCORD_CLIENT_ID);
+    }
 }
-NoodleBot.init();
-module.exports = NoodleBot;
+
+(
+    () => {
+        try {
+            NoodleBot.start();
+            console.log("[STARTUP] Startup succeeded");
+        } catch (error) {
+            console.error("[STARTUP] Startup encountered a problem:");
+            console.error(error);
+        }
+    }
+)()
