@@ -1,9 +1,6 @@
-const { REST } = require('@discordjs/rest');
-const { Routes, InteractionResponseType } = require('discord-api-types/v9');
-const fs = require('fs');
-const path = require('path');
 const Command = require('../objects/Command');
-const commandPath = path.join(path.dirname(require.main.filename),"commands");
+const CommandRegistryUtil = require('./CommandRegistryUtil');
+const FileUtil = require('./FileUtil');
 
 class CommandHandler {
     /**
@@ -12,38 +9,16 @@ class CommandHandler {
      */
     static commandMap = new Map();
 
-    static registerSlashCommands = async (clientID) => {
-        // from https://discordjs.guide/interactions/registering-slash-commands.html#guild-commands
-        let files = this.#getCommandFiles();
-        let commands = [];
-        
-        for(let file of files) {
-            let command = require(file);
-
-            if(command instanceof Command){
-                try {
-                    commands.push(command.data.toJSON());
-                    this.commandMap.set(command.data.name, command);
-                } catch (err) {
-                    console.log(err);
-                }
-            }
-            else {
-                console.log(`[CommandHandler] File at "${file}" does not export an object of type Command. Consider moving this file out of "./commands" or exporting a Command object.`)
-            }
+    /**
+     * Sets up the command handler
+     * @param {Boolean} shouldUpdateGlobalRegistry should the Discord global command registry be updated with new commands?
+     */
+    static init = async (shouldUpdateGlobalRegistry=false) => {
+        const files = FileUtil.getCommandFiles();
+        if(shouldUpdateGlobalRegistry){
+            await CommandRegistryUtil.updateGlobalCommandRegistry(files);
         }
-        
-        const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
-
-        try{
-            await rest.put(
-                Routes.applicationCommands(clientID),
-                { body: commands }
-            )
-        } catch (err) {
-            console.error(err);
-        }
-
+        this.#populateCommandMap(files);
     }
 
     /**
@@ -54,30 +29,30 @@ class CommandHandler {
         let command = this.commandMap.get(interaction.commandName);
         
         for(let condition of command.conditions) {
-            if(!condition(interaction)) return;
+            if(!condition.execute(interaction)) return;
         }
 
         command.execute(interaction);
     }
 
     /**
-     * Returns all js files (including nested files) in a directory
-     * @param {String} dir directory to search through
+     * Fills the command map with command names and their corresponding command object
+     * @param {Array<String>} commandFiles routes to all commands
      */
-    static #getCommandFiles(dir=commandPath) {
-        let files = [];
-        for(const i of fs.readdirSync(dir)) {
-            const iPath = path.join(dir, i)
-            const isDir = fs.lstatSync(iPath).isDirectory()
-
-            if(i.endsWith(".js") && !isDir) {
-                files.push(iPath);
-            } 
-            else if (isDir) {
-                files = files.concat(this.#getCommandFiles(iPath));
+    static #populateCommandMap = (commandFiles) => {
+        for(let file of commandFiles) {
+            let command = require(file);
+            if(command instanceof Command){
+                try {
+                    this.commandMap.set(command.data.name, command);
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+            else {
+                console.log(`[CommandHandler] File at "${file}" does not export an object of type Command. Consider moving this file out of "./commands" or exporting a Command object.`)
             }
         }
-        return files;
     }
 }
 

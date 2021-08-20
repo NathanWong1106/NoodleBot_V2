@@ -6,12 +6,14 @@ class NoodleBot {
     /**
      * Client object of an instance of NoodleBot
      * @type Discord.Client
+     * @static
      */
     static client = new Discord.Client({ intents: [Discord.Intents.FLAGS.GUILDS] });
 
     /**
      * Map of all Guild IDs with the bot's respective state
      * @type Map<String, GuildState>
+     * @static
      */
     static guildStates = new Map();
 
@@ -24,8 +26,7 @@ class NoodleBot {
             CommandHandler.handleCommand(interaction);
         })
         this.client.login(process.env.DISCORD_TOKEN);
-
-        CommandHandler.registerSlashCommands(process.env.DISCORD_CLIENT_ID);
+        CommandHandler.init(false);
     }
 }
 

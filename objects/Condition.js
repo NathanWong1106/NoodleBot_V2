@@ -1,3 +1,5 @@
+const { Interaction } = require("discord.js");
+
 /**
  * Represents any condition that must be met before a command is executed
  * 
@@ -6,7 +8,7 @@
 class Condition {
     /**
      * @param {String} name 
-     * @param {function(interaction)} execute 
+     * @param {function(Interaction):Boolean} execute 
      * @param {String} message 
      */
     constructor(name, execute, message) {
