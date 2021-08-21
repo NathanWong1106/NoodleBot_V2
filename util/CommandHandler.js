@@ -1,3 +1,4 @@
+const { Interaction } = require('discord.js');
 const Command = require('../objects/Command');
 const CommandRegistryUtil = require('./CommandRegistryUtil');
 const FileUtil = require('./FileUtil');
@@ -29,7 +30,10 @@ class CommandHandler {
         let command = this.commandMap.get(interaction.commandName);
         
         for(let condition of command.conditions) {
-            if(!condition.execute(interaction)) return;
+            if(!condition.execute(interaction)){
+                interaction.reply(condition.failureMsg);
+                return;
+            };
         }
 
         command.execute(interaction);

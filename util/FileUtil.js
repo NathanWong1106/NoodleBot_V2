@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const commandPath = path.join(path.dirname(require.main.filename),"commands");
+const commandPath = path.join(path.dirname(path.resolve("bot.js")),"commands");
 
 /**
  * Any file IO functions should be here

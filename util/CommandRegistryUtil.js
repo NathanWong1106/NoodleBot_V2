@@ -8,12 +8,14 @@ const FileUtil = require('./FileUtil');
  * Functions to register slash commands with the Discord API.
  */
 class CommandRegistryUtil {
+
     /**
      * Registers or deletes global bot commands based on files contained in "./commands" using the Discord REST API
      * @param {Array<String>} commandFiles routes to all commands
+     * @param {String} route route to access
      * @see https://discord.com/developers/docs/interactions/application-commands
      */
-    static updateGlobalCommandRegistry = async (commandFiles) => {
+    static #updateRegistry = async(commandFiles, route) => {
         const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
         try{
             let registeredCommands = await rest.get(
@@ -35,11 +37,11 @@ class CommandRegistryUtil {
             let toDelete = registeredCommands.filter(({name}) => !currentCommands.some((command) => command.data.name === name))
 
             for(let obj of toDelete) {
-                await rest.delete(`${Routes.applicationsCommands(process.env.DISCORD_APPLICATION_ID)}/${obj.id}`);
+                await rest.delete(`${route}/${obj.id}`);
             }
 
             await rest.put(
-                Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID),
+                route,
                 {
                     body: currentCommands.map(command => command.data.toJSON())
                 }
@@ -48,8 +50,42 @@ class CommandRegistryUtil {
             console.error(err);
             return;
         }
-        
+    }
+
+    static #deleteRegistry = async(route) => {
+        const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
+        try{
+            let registeredCommands = await rest.get(
+                route
+            );
+
+            for(let obj of registeredCommands) {
+                await rest.delete(`${route}/${obj.id}`);
+            }
+        } catch (err) {
+            console.error(err);
+            return;
+        }
+    }
+
+    static updateGlobalCommandRegistry = async(commandFiles) => {
+        await this.#updateRegistry(commandFiles, Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID));
         console.log("[CommandRegistryUtil] Updated global commands");
+    }
+
+    static updateGuildCommandRegistry = async(commandFiles, guildID) => {
+        await this.#updateRegistry(commandFiles, Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, guildID));
+        console.log("[CommandRegistryUtil] Updated guild commands");
+    }
+
+    static clearGlobalCommands = async() => {
+        await this.#deleteRegistry(Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID));
+        console.log("[CommandRegistryUtil] Deleted global commands");
+    }
+
+    static clearGuildCommands = async(guildID) => {
+        await this.#deleteRegistry(Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, guildID));
+        console.log("[CommandRegistryUtil] Deleted guild commands");
     }
 }
 
@@ -58,5 +94,6 @@ module.exports = CommandRegistryUtil;
 // This file can also be run standalone to register/update/delete commands
 // Runs only if this file is run as main
 if(require.main === module){
-    CommandRegistryUtil.updateGlobalCommandRegistry(FileUtil.getCommandFiles())
+    require("dotenv").config();
+    CommandRegistryUtil.updateGuildCommandRegistry(FileUtil.getCommandFiles(), process.env.TEST_GUILD_ID);
 }
