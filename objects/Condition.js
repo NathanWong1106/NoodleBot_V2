@@ -60,7 +60,7 @@ class Condition {
          * Returns the opposite of a condition (!)
          * @param {Condition} condition one of the preexisting conditions
          * @param {String} newMessage new failure message when condition is reversed, if null then original message is kept
-         * @example Condition.functions.reverse(Condition.voice.botIsConnected);
+         * @returns {Condition}
          */
         not: (condition, newMessage=null) => {
             return new Condition(condition.name, newMessage ? newMessage : condition.failureMsg, 
@@ -69,18 +69,30 @@ class Condition {
         },
 
         /**
+         * Returns true if one or both of the conditions is satisfied
          * @param {Condition} condition1 first condition
          * @param {Condition} condition2 second condition
          * @param {String} newMessage new failure message if both conditions fail
-         * @returns 
+         * @returns {Condition}
          */
-        or: (condition1, condition2, newMessage) => {
+        or: (condition1, condition2, newMessage="condition failed") => {
             return new Condition(`${condition1.name} OR ${condition2.name}`, newMessage, 
                 (interaction) => condition1.execute(interaction) || condition2.execute(interaction)
             );
-        }
+        },
 
-        //NOTE: AND is the just the array of conditions defined in each command so not necessarily needed here
+        /**
+         * Returns true if both conditions are satisfied
+         * @param {Condition} condition1 first condition
+         * @param {Condition} condition2 second condition
+         * @param {String} newMessage new failure message if both conditions fail
+         * @returns {Condition}
+         */
+        and: (condition1, condition2, newMessage="condition failed") => {
+            return new Condition(`${condition1.name} AND ${condition2.name}`, newMessage,
+                (interaction) => condition1.execute(interaction) && condition2.execute(interaction)
+            )
+        }
     }
 }
 

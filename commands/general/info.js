@@ -5,7 +5,7 @@ const Condition = require("../../objects/Condition");
 const NAME = "info";
 const DESC = "Placeholder";
 const CONDITIONS = [];
-const DATA= new SlashCommandBuilder();
+const DATA = new SlashCommandBuilder();
 
 const execute = async (interaction) => {
     await interaction.reply("This is a placeholder function");

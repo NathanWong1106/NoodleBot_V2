@@ -1,4 +1,4 @@
-const { VoiceConnection, VoiceConnectionStatus, AudioPlayer,joinVoiceChannel, createAudioPlayer, entersState } = require("@discordjs/voice");
+const { VoiceConnection, VoiceConnectionStatus, AudioPlayer, AudioPlayerStatus, joinVoiceChannel, createAudioPlayer, entersState, AudioResource } = require("@discordjs/voice");
 const { VoiceChannel } = require("discord.js");
 //NOTE: With Discord.js v13 the audio player has changed dramatically
 //Refer to: https://discordjs.guide/voice/
@@ -41,7 +41,7 @@ class AudioHandler {
             guildId: channel.guild.id,
             adapterCreator: channel.guild.voiceAdapterCreator
         });
-        this.connection.on(VoiceConnectionStatus.Disconnected, this.onDisconnect);
+        this.connection.on(VoiceConnectionStatus.Disconnected, this.#onDisconnect);
         
         this.player = createAudioPlayer();
         this.connection.subscribe(this.player);
@@ -52,17 +52,57 @@ class AudioHandler {
         this.connection.disconnect();
     }
 
+    /**
+     * Start playing
+     */
+    play = () => {
+        if(this.queue.length === 1 || !this.isPlaying){
+            this.isPlaying = this.player.unpause();
+
+            if(!(this.player.state.resource)){
+                this.player.play(this.queue.shift());
+                //this.player.on(AudioPlayerStatus.Idle, this.playNext);
+            }
+        }
+    }
+
+    /**
+     * Pause playing
+     */
+    pause = () => {
+        if(this.isPlaying){
+            this.isPlaying = !this.player.pause(true);
+        }
+    }
+
+    /**
+     * Play the next `AudioResource` in the queue
+     */
+    playNext = () => {
+        //TODO: Sleep deprived me shall work on this later
+    }
+
+    /**
+     * Add an `AudioResource` to the queue
+     * @param {AudioResource} audioResource 
+     */
+    enqueue = (audioResource) => {
+        this.queue.push(audioResource);
+    }
+
+    
+
     //https://discordjs.guide/voice/voice-connections.html#handling-disconnects
     //3 possible scenarios here
-    onDisconnect = async(oldState, newState) => {
+    #onDisconnect = async(oldState, newState) => {
         /**
          * This code from the discordjs guide is a workaround to differentiate actual disconnects from resumable/reconnectable disconnects
          * @see https://discordjs.guide/voice/voice-connections.html#handling-disconnects
          */
         try {
             await Promise.race([
-                entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-                entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+                entersState(this.connection, VoiceConnectionStatus.Signalling, 5_000),
+                entersState(this.connection, VoiceConnectionStatus.Connecting, 5_000),
             ]);
             // Seems to be reconnecting to a new channel - ignore disconnect
         } catch (error) {
@@ -73,6 +113,13 @@ class AudioHandler {
             //Stop the player then set null for GC
             this.player.stop();
             this.player = null;
+            5_000_000
+
+            //reset everything else
+            this.queue = [];
+            this.isPlaying = false;
+            this.isLoopingOne = false;
+            this.isLoopingQueue = false;
         }
     }
 }

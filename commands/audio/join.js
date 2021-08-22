@@ -9,7 +9,7 @@ const CONDITIONS = [
     Condition.voice.userInVC, 
     Condition.operators.not(Condition.voice.botIsConnected, "The bot is already connected to another voice channel")
 ];
-const DATA= new SlashCommandBuilder();
+const DATA = new SlashCommandBuilder();
 
 const execute = async (interaction) => {
     try{

@@ -10,7 +10,7 @@ const CONDITIONS = [
     Condition.voice.botIsConnected, 
     Condition.voice.userInSameVC
 ];
-const DATA= new SlashCommandBuilder();
+const DATA = new SlashCommandBuilder();
 
 const execute = async (interaction) => {
     try{

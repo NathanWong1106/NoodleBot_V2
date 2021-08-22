@@ -5,7 +5,7 @@ const Condition = require("../objects/Condition");
 const NAME = "ping";
 const DESC = "Ping Pong";
 const CONDITIONS = [];
-const DATA= new SlashCommandBuilder();
+const DATA = new SlashCommandBuilder();
 
 const execute = async (interaction) => {
     await interaction.reply("pong");
