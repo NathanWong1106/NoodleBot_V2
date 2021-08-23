@@ -8,7 +8,7 @@ const NAME = "play";
 const DESC = "Add a video from YouTube to the queue";
 const CONDITIONS = [
     Condition.voice.userInVC,
-    Condition.voice.botIsConnected, 
+    Condition.voice.isConnected, 
     Condition.voice.userInSameVC,
 ];
 const DATA = new SlashCommandBuilder()
@@ -19,20 +19,25 @@ const DATA = new SlashCommandBuilder()
     );
 
 const execute = async (interaction) => {
-    try{
-        const query = interaction.options.getString("query");
+    const query = interaction.options.getString("query");
+    try {
         await interaction.deferReply() //We need to defer reply since YT query may take longer than 3 secs
         
         const audioResource = await YouTubeQueryHandler.getAudioResourceFromQuery(query);
 
+        if(audioResource === null){
+            await interaction.editReply(`Unable to add ${query} to the queue`);
+            return;
+        }
+
         const audioHandler = NoodleBot.guildStates.get(interaction.guildId).audio;
         audioHandler.enqueue(audioResource);
-        audioHandler.play();
+        await audioHandler.play();
 
-        await interaction.editReply(`Added ${query} to queue`);
+        await interaction.editReply(`Added ${query} to the queue`);
     } catch (err) {
         console.log(err);
-        await interaction.editReply("Damn I messed up");
+        await interaction.editReply(`Unable to add ${query} to the queue`);
     }
 }
 

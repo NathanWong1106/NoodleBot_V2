@@ -7,7 +7,7 @@ const NAME = "join";
 const DESC = "Invite NoodleBot into your voice channel";
 const CONDITIONS = [
     Condition.voice.userInVC, 
-    Condition.operators.not(Condition.voice.botIsConnected, "The bot is already connected to another voice channel")
+    Condition.operators.not(Condition.voice.isConnected, "The bot is already connected to another voice channel")
 ];
 const DATA = new SlashCommandBuilder();
 

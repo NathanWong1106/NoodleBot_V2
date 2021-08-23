@@ -1,5 +1,6 @@
-const { VoiceConnection, VoiceConnectionStatus, AudioPlayer, AudioPlayerStatus, joinVoiceChannel, createAudioPlayer, entersState, AudioResource } = require("@discordjs/voice");
+const { VoiceConnection, VoiceConnectionStatus, AudioPlayer, AudioPlayerStatus, joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioResource, StreamType} = require("@discordjs/voice");
 const { VoiceChannel } = require("discord.js");
+const ytdl = require("ytdl-core-discord");
 //NOTE: With Discord.js v13 the audio player has changed dramatically
 //Refer to: https://discordjs.guide/voice/
 
@@ -20,8 +21,25 @@ class AudioHandler {
      */
     player = null;
 
+    /**
+     * The `AudioResource` currently being played by {@link AudioHandler.player}
+     * @type {AudioResource} null if nothing is being played
+     */
+    currentResource = null;
+
+    /**
+     * Queue of clips to play
+     * @type {Array<AudioResource>}
+     */
     queue = [];
-    isPlaying = false;
+    
+    /**
+     * Whether the player is unpaused, NOT whether a resource is currently playing.
+     * This can be true even when a resource is not playing.
+     * To check if a resource is playing see {@link AudioHandler.currentResource}
+     */
+    isPlaying = true;
+
     isLoopingOne = false;
     isLoopingQueue = false;
 
@@ -44,6 +62,7 @@ class AudioHandler {
         this.connection.on(VoiceConnectionStatus.Disconnected, this.#onDisconnect);
         
         this.player = createAudioPlayer();
+        this.player.on(AudioPlayerStatus.Idle, this.playNext);
         this.connection.subscribe(this.player);
     }
 
@@ -55,14 +74,12 @@ class AudioHandler {
     /**
      * Start playing
      */
-    play = () => {
-        if(this.queue.length === 1 || !this.isPlaying){
-            this.isPlaying = this.player.unpause();
-
-            if(!(this.player.state.resource)){
-                this.player.play(this.queue.shift());
-                //this.player.on(AudioPlayerStatus.Idle, this.playNext);
-            }
+    play = async() => {
+        //Do not start play if paused or currently playing a clip
+        if(!this.isPlaying || this.currentResource != null) return;
+        
+        if(this.queue.length >= 1) {
+            await this.#playNextInQueue();
         }
     }
 
@@ -75,11 +92,44 @@ class AudioHandler {
         }
     }
 
+    unpause = () => {
+        if(!this.isPlaying){
+            this.isPlaying = this.player.unpause();
+        }
+    }
+
     /**
-     * Play the next `AudioResource` in the queue
+     * Play the next `AudioResource` in the queue.
+     * 
+     * NOTE: to skip use {@link AudioHandler.skip}
      */
-    playNext = () => {
-        //TODO: Sleep deprived me shall work on this later
+    playNext = async() => {
+        if(this.isPlaying && this.queue.length >= 0){
+            //prioritize looping one over loopingQueue
+            if(this.isLoopingOne){
+                this.player.play(await this.#copyAudioResource(this.currentResource));
+            }
+            else if (this.isLoopingQueue){
+                this.queue.push(this.currentResource);
+                await this.#playNextInQueue();
+            }
+            else{
+                if(this.queue.length >= 1){
+                    await this.#playNextInQueue();
+                }
+            }
+        }
+        else if (this.queue.length === 0){
+            this.currentResource = null;
+        }
+    }
+
+    /**
+     * Skip is {@link AudioHandler.playNext} but overrides pause if one is applied
+     */
+    skip = () => {
+        if(!this.isPlaying) this.unpause();
+        this.playNext();
     }
 
     /**
@@ -113,14 +163,37 @@ class AudioHandler {
             //Stop the player then set null for GC
             this.player.stop();
             this.player = null;
-            5_000_000
 
             //reset everything else
+            this.currentResource = null;
             this.queue = [];
-            this.isPlaying = false;
+            this.isPlaying = true;
             this.isLoopingOne = false;
             this.isLoopingQueue = false;
         }
+    }
+
+    #playNextInQueue = async() => {
+        const res = this.queue.shift();
+        this.currentResource = await this.#copyAudioResource(res);
+        this.player.play(res);
+    }
+
+    /**
+     * Returns an unplayed duplicate of the given audioResource.
+     * 
+     * This function exists because audioResources seem to be a one use object.
+     * If another option is available this will be refactored.
+     * 
+     * @param {AudioResource} audioResource 
+     * @async asychronous due to loading by `ytdl`
+     * @returns {AudioResource} a new copy of the audioResource
+     */
+    #copyAudioResource = async(audioResource) => {
+        return createAudioResource(await ytdl(audioResource.metadata.url), {
+            inputType: StreamType.Opus,
+            metadata: audioResource.metadata
+        });
     }
 }
 

@@ -27,9 +27,15 @@ class Condition {
         /**
          * The bot must be connected to a voice channel in the guild where the command was created
          */
-        botIsConnected: new Condition("bot-connected", "NoodleBot is not connected to any voice channels in this server",
+        isConnected: new Condition("bot-connected", "NoodleBot is not connected to any voice channels in this server",
             (interaction) => {
                 return NoodleBot.guildStates.get(interaction.guildId).audio.connection != null;
+            }
+        ),
+
+        hasAudioResource: new Condition("has-audio-resource", "Nothing is playing at the moment",
+            (interaction)=> {
+                return NoodleBot.guildStates.get(interaction.guildId).audio.currentResource ? true : false;
             }
         ),
         

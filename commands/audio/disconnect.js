@@ -7,7 +7,7 @@ const NAME = "disconnect";
 const DESC = "Disconnect NoodleBot from your voice channel";
 const CONDITIONS = [
     Condition.voice.userInVC, 
-    Condition.voice.botIsConnected, 
+    Condition.voice.isConnected, 
     Condition.voice.userInSameVC
 ];
 const DATA = new SlashCommandBuilder();

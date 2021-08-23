@@ -25,11 +25,17 @@ class YouTubeQueryHandler {
         }
         else{
             //Is a search
-            const res = await ytsr(query);
+            const res = await ytsr(query, {
+                limit: 1
+            });
             
             if(res.results === 0) return null;
 
             const info = await ytdl.getBasicInfo(res.items[0].url);
+
+            //Do not play live content
+            if(info.videoDetails.isLiveContent) return null;
+            
             return await this.#createAudioResourceFromInfo(info);
         }
     }
