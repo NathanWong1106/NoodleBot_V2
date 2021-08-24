@@ -1,6 +1,7 @@
 const { VoiceConnection, VoiceConnectionStatus, AudioPlayer, AudioPlayerStatus, joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioResource, StreamType} = require("@discordjs/voice");
 const { VoiceChannel } = require("discord.js");
 const ytdl = require("ytdl-core-discord");
+const AudioObject = require("../objects/AudioObject");
 //NOTE: With Discord.js v13 the audio player has changed dramatically
 //Refer to: https://discordjs.guide/voice/
 
@@ -23,13 +24,13 @@ class AudioHandler {
 
     /**
      * The `AudioResource` currently being played by {@link AudioHandler.player}
-     * @type {AudioResource} null if nothing is being played
+     * @type {AudioResource<AudioObject} null if nothing is being played
      */
     currentResource = null;
 
     /**
      * Queue of clips to play
-     * @type {Array<AudioResource>}
+     * @type {Array<AudioResource<AudioObject>}
      */
     queue = [];
     
@@ -63,6 +64,10 @@ class AudioHandler {
         
         this.player = createAudioPlayer();
         this.player.on(AudioPlayerStatus.Idle, this.playNext);
+        this.player.on("error", (err) => {
+            console.error(`Error: ${error.message} with resource ${error.resource.metadata.title}`);
+            this.playNext();
+        })
         this.connection.subscribe(this.player);
     }
 
@@ -138,6 +143,43 @@ class AudioHandler {
      */
     enqueue = (audioResource) => {
         this.queue.push(audioResource);
+    }
+
+    
+    /**
+     * Returns a string with the queue at the specified page.
+     * 
+     * Embed descriptions are limited to 4096 characters
+     * @param {Number} page integer >= 1
+     * @returns {String | null} string of the page, null if page doesn't exist
+     */
+    getQueuePagination = page => {
+        if(this.queue.length === 0 || page < 1) return null;
+
+        const charLim = 4096
+        let pages = [];
+        let currentString = "";
+
+        for(let index = 0; index < this.queue.length; index++){
+            let queueString = this.queue[index].metadata.getQueueString();
+
+            if(currentString.length + queueString.length < charLim){
+                currentString += `${index + 1}) ${queueString}\n`;
+            }
+            else{
+                pages.push(currentString);
+                currentString = queueString;
+            }
+        }
+
+        //push any remaining string to the page array
+        if(currentString.length > 0) {
+            pages.push(currentString);
+        }
+
+        if(page - 1 >= pages.length) return null;
+
+        return pages[page - 1];
     }
 
     

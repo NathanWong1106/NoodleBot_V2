@@ -8,7 +8,7 @@ class YouTubeQueryHandler {
     /**
      * Attempts to get a YouTube video from the query and return an Opus `AudioResource` using `ytdl-core-discord`
      * @param {String} query either a search query or a valid YouTube URL
-     * @returns {AudioResource | null} audio resource if successful, else null
+     * @returns {AudioResource<AudioObject> | null} audio resource if successful, else null
      * 
      * TODO: perhaps instead of null an error message is sent | this method takes far too long, see what we can do to optimize
      */
